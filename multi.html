@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>República — Multijogador (guerra entre presidentes)</title>
+<link rel="stylesheet" href="style.css">
+<style>
+#app{padding:12px 18px 30px;max-width:1000px;margin:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:.85rem}.tbl th,.tbl td{padding:6px 8px;text-align:center;border-bottom:1px solid #22392c}
+.tbl td:first-child,.tbl th:first-child{text-align:left}.morto{opacity:.4;text-decoration:line-through}
+.op{display:block;margin:6px 0;padding:8px;border:1px solid #35553f;border-radius:8px;font-size:.85rem;cursor:pointer}
+input[type=text],select{width:100%;padding:9px;border-radius:8px;border:1px solid #35553f;background:#0b150f;color:var(--tx);margin:4px 0}
+.cod{font-size:2.2rem;letter-spacing:.4rem;color:var(--y);font-weight:800;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:12px}
+details{margin-top:10px;font-size:.85rem;color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🇧🇷 República <small>Multijogador (guerra entre presidentes)</small></h1>
+  <button onclick="location.href='index.html'">← Modo solo</button>
+</header>
+<div id="app"></div>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="multi.js"></script>
+</body>
+</html>
