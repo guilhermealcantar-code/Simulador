@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>República 3D - Simulador de Governo Tático</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #0b0f19; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; -webkit-user-select: none; }
+        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        /* Interface Superior */
+        #top-bar { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; gap: 20px; background: rgba(11, 15, 25, 0.85); padding: 10px 25px; border-radius: 30px; border: 1px solid #1e293b; box-shadow: 0 4px 20px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
+        .stat-box { display: flex; flex-direction: column; align-items: center; color: #fff; min-width: 90px; }
+        .stat-label { font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; letter-spacing: 1px; }
+        .stat-val { font-size: 18px; font-weight: bold; color: #38bdf8; }
+        .stat-val.hp-my { color: #4ade80; }
+        .stat-val.hp-op { color: #f87171; }
+
+        /* Configuração de Sessão rápida lateral */
+        #setup-panel { position: absolute; top: 15px; left: 15px; z-index: 10; background: rgba(15, 23, 42, 0.9); padding: 12px; border-radius: 12px; border: 1px solid #334155; color: white; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+        #setup-panel input { background: #0f172a; border: 1px solid #475569; color: white; padding: 4px 8px; border-radius: 4px; width: 100px; font-size: 12px; }
+        #setup-panel button { background: #2563eb; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        #setup-panel button:hover { background: #1d4ed8; }
+
+        /* Painel de Ações Táticas (Mundo Inferior) */
+        #action-dock { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; gap: 15px; background: rgba(15, 23, 42, 0.9); padding: 15px; border-radius: 20px; border: 1px solid #334155; box-shadow: 0 -10px 25px rgba(0,0,0,0.6); backdrop-filter: blur(8px); }
+        .action-btn { background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid #475569; border-radius: 14px; color: white; padding: 12px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; min-width: 110px; transition: all 0.2s ease; font-weight: bold; }
+        .action-btn:hover { border-color: #38bdf8; transform: translateY(-3px); box-shadow: 0 5px 15px rgba(56, 189, 248, 0.3); }
+        .action-btn.attack { border-color: #ef4444; }
+        .action-btn.attack:hover { box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4); }
+        .action-btn.trade { border-color: #f59e0b; }
+        .action-btn.trade:hover { box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); }
+        .action-btn.alliance { border-color: #10b981; }
+        .action-btn.alliance:hover { box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4); }
+        .btn-sub { font-size: 9px; color: #94a3b8; font-weight: normal; margin-top: 2px; }
+
+        /* JANELÃO DE REVISÃO E DECISÃO */
+        #decision-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; }
+        #decision-card { background: linear-gradient(145deg, #1e293b, #0f172a); border: 3px solid #38bdf8; border-radius: 24px; padding: 30px; width: 90%; max-width: 440px; text-align: center; color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.8); box-sizing: border-box; position: relative; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        #decision-card.alert-attack { border-color: #ef4444; }
+        #decision-card.alert-trade { border-color: #f59e0b; }
+        #decision-card.alert-alliance { border-color: #10b981; }
+        
+        #timer-track { width: 100%; height: 6px; background: #334155; border-radius: 3px; margin-top: 15px; overflow: hidden; }
+        #timer-bar { width: 100%; height: 100%; background: #ef4444; border-radius: 3px; transition: width 0.1s linear; }
+        
+        #decision-title { font-size: 24px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin: 0; }
+        #decision-desc { font-size: 15px; color: #cbd5e1; margin: 15px 0 25px 0; line-height: 1.4; }
+        
+        .grid-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .choice-btn { padding: 14px 10px; font-size: 13px; font-weight: bold; border-radius: 12px; border: none; cursor: pointer; color: white; transition: background 0.1s ease, transform 0.1s ease; text-transform: uppercase; }
+        .choice-btn:active { transform: scale(0.97); }
+        .btn-accept { background: #10b981; }
+        .btn-accept:hover { background: #059669; }
+        .btn-reject { background: #ef4444; }
+        .btn-reject:hover { background: #dc2626; }
+        .btn-revise { background: #f59e0b; color: #0f172a; }
+        .btn-revise:hover { background: #d97706; }
+        .btn-counter { background: #6366f1; }
+        .btn-counter:hover { background: #4f46e5; }
+
+        /* Notificações flutuantes de status */
+        #log-hud { position: absolute; top: 100px; right: 15px; z-index: 10; display: flex; flex-direction: column; gap: 8px; max-width: 280px; pointer-events: none; }
+        .hud-toast { background: rgba(30, 41, 59, 0.9); border-left: 4px solid #38bdf8; color: white; padding: 10px 14px; font-size: 12px; font-weight: 500; border-radius: 0 8px 8px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.2s ease forwards; }
+        @keyframes slideIn { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Bloqueio de carregamento */
+        #loader { position: absolute; width: 100%; height: 100%; background: #0b0f19; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .spinner { border: 4px solid rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: #38bdf8; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    
+    <!-- Fallback de CDN para garantir o carregamento do Three.js e TWEEN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/three@0.128.0/build/three.min.js';"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js" onerror="this.onerror=null;this.src='https://unpkg.com/@tweenjs/tween.js@18.6.4/dist/tween.umd.js';"></script>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <div id="load-txt">Montando Arena Estratégica 3D...</div>
+    </div>
+
+    <div id="setup-panel">
+        <div><strong>Identidade Tática</strong></div>
+        <label>Meu ID: <input type="text" id="my-id" value="player1"></label>
+        <label>Rival ID: <input type="text" id="target-id" value="player2"></label>
+        <button onclick="reiniciarConexao()">Reconectar Arena</button>
+    </div>
+
+    <div id="top-bar">
+        <div class="stat-box">
+            <span class="stat-label">Minha Base</span>
+            <span class="stat-val hp-my" id="my-hp">100%</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">Rival</span>
+            <span class="stat-val hp-op" id="op-hp">100%</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">Sequência</span>
+            <span class="stat-val" id="world-seq">0</span>
+        </div>
+    </div>
+
+    <div id="log-hud"></div>
+
+    <div id="action-dock">
+        <div class="action-btn attack" onclick="dispararAcao('ATTACK')">
+            <span>💥 ATACAR</span>
+            <span class="btn-sub">Míssil de Impacto</span>
+        </div>
+        <div class="action-btn trade" onclick="dispararAcao('GOLD')">
+            <span>💰 ENVIAR OURO</span>
+            <span class="btn-sub">Oferta de Suprimento</span>
+        </div>
+        <div class="action-btn alliance" onclick="dispararAcao('ALLIANCE')">
+            <span>🤝 ALIANÇA</span>
+            <span class="btn-sub">Tratado Bilateral</span>
+        </div>
+    </div>
+
+    <div id="decision-overlay">
+        <div id="decision-card">
+            <h2 id="decision-title">Intercepção Detectada</h2>
+            <p id="decision-desc">O oponente enviou uma proposta pendente. O que deseja fazer?</p>
+            
+            <div class="grid-choices">
+                <button class="choice-btn btn-accept" onclick="responderAcao('ACCEPTED')">✓ Aceitar</button>
+                <button class="choice-btn btn-reject" onclick="responderAcao('REJECTED')">✕ Recusar</button>
+                <button class="choice-btn btn-revise" onclick="responderAcao('REVISED')">✎ Revisar</button>
+                <button class="choice-btn btn-counter" onclick="responderAcao('COUNTERED')">⚡ Rebater</button>
+            </div>
+            
+            <div id="timer-track">
+                <div id="timer-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        // Configuração de URL adaptativa
+        const API_URL = window.location.origin.startsWith('file://') ? "http://localhost:3000/api/server" : window.location.origin + "/api/server"; 
+
+        let ME_ID = "player1";
+        let TARGET_ID = "player2";
+        let lastSeq = -1;
+        let activeTradeId = null;
+        let countdownInterval = null;
+        let countdownTime = 15;
+
+        // Dados de saúde interna
+        let myHealth = 100;
+        let opHealth = 100;
+
+        // Variaveis globais do Three.js
+        let scene, camera, renderer;
+        let myBaseMesh, opBaseMesh;
+        let myShield, opShield;
+        const activeProjectiles = [];
+
+        function init3D() {
+            try {
+                if (typeof THREE === 'undefined') {
+                    throw new Error("Three.js não foi carregado. Verifique a ligação à internet.");
+                }
+
+                const container = document.getElementById('canvas-container');
+                
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x0b0f19);
+                scene.fog = new THREE.FogExp2(0x0b0f19, 0.015);
+
+                camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+                camera.position.set(0, 35, 45);
+                camera.lookAt(0, 2, 0);
+
+                renderer = new THREE.WebGLRenderer({ antialias: false, precision: 'mediump', powerPreference: "high-performance" });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                container.appendChild(renderer.domElement);
+
+                const ambientLight = new THREE.AmbientLight(0x334155, 1.2);
+                scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.5);
+                dirLight.position.set(20, 40, 20);
+                scene.add(dirLight);
+
+                construirMundoLowPoly();
+
+                // Ocultar Loader com sucesso
+                document.getElementById('loader').style.display = 'none';
+
+                window.addEventListener('resize', onWindowResize);
+                animate();
+            } catch (err) {
+                console.error("Erro ao inicializar 3D:", err);
+                const loadTxt = document.getElementById('load-txt');
+                if (loadTxt) loadTxt.innerText = "Erro ao carregar gráficos 3D. Recarregue a página.";
+            }
+        }
+
+        function construirMundoLowPoly() {
+            const groundGeo = new THREE.BoxGeometry(60, 2, 30);
+            const groundMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, flatShading: true });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.position.y = -1;
+            scene.add(ground);
+
+            const riverGeo = new THREE.BoxGeometry(4, 2.1, 30);
+            const riverMat = new THREE.MeshPhongMaterial({ color: 0x0284c7, flatShading: true });
+            const river = new THREE.Mesh(riverGeo, riverMat);
+            river.position.set(0, -1, 0);
+            scene.add(river);
+
+            const mountainGeo = new THREE.ConeGeometry(4, 8, 4);
+            const mountainMat = new THREE.MeshPhongMaterial({ color: 0x334155, flatShading: true });
+            
+            const mPositions = [
+                [-25, 3, -12], [-22, 2, -13], [25, 3, -12], [22, 2, -13],
+                [-26, 3, 12], [24, 2, 12]
+            ];
+            mPositions.forEach(pos => {
+                const cone = new THREE.Mesh(mountainGeo, mountainMat);
+                cone.position.set(pos[0], pos[1], pos[2]);
+                scene.add(cone);
+            });
+
+            const baseGeo = new THREE.CylinderGeometry(2.5, 3.5, 6, 6);
+            const myBaseMat = new THREE.MeshPhongMaterial({ color: 0x10b981, flatShading: true });
+            myBaseMesh = new THREE.Mesh(baseGeo, myBaseMat);
+            myBaseMesh.position.set(-18, 3, 0);
+            scene.add(myBaseMesh);
+
+            const coreGeo = new THREE.OctahedronGeometry(1, 0);
+            const coreMyMat = new THREE.MeshPhongMaterial({ color: 0x34d399, emissive: 0x047857 });
+            const myCore = new THREE.Mesh(coreGeo, coreMyMat);
+            myCore.position.set(-18, 7, 0);
+            myCore.name = "spinning_core_my";
+            scene.add(myCore);
+
+            const shieldGeo = new THREE.SphereGeometry(4.5, 12, 12);
+            const shieldMyMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true, transparent: true, opacity: 0 });
+            myShield = new THREE.Mesh(shieldGeo, shieldMyMat);
+            myShield.position.set(-18, 3, 0);
+            scene.add(myShield);
+
+            const opBaseMat = new THREE.MeshPhongMaterial({ color: 0xef4444, flatShading: true });
+            opBaseMesh = new THREE.Mesh(baseGeo, opBaseMat);
+            opBaseMesh.position.set(18, 3, 0);
+            scene.add(opBaseMesh);
+
+            const coreOpMat = new THREE.MeshPhongMaterial({ color: 0xf87171, emissive: 0xb91c1c });
+            const opCore = new THREE.Mesh(coreGeo, coreOpMat);
+            opCore.position.set(18, 7, 0);
+            opCore.name = "spinning_core_op";
+            scene.add(opCore);
+
+            opShield = new THREE.Mesh(shieldGeo, shieldMyMat.clone());
+            opShield.position.set(18, 3, 0);
+            scene.add(opShield);
+        }
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+            if (typeof TWEEN !== 'undefined') {
+                TWEEN.update();
+            }
+
+            const coreMy = scene.getObjectByName("spinning_core_my");
+            if (coreMy) { coreMy.rotation.y += 0.02; coreMy.rotation.x += 0.01; }
+            
+            const coreOp = scene.getObjectByName("spinning_core_op");
+            if (coreOp) { coreOp.rotation.y += 0.02; coreOp.rotation.z += 0.01; }
+
+            activeProjectiles.forEach(p => {
+                p.mesh.rotation.x += 0.05;
+                p.mesh.rotation.y += 0.03;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function dispararAcao(tipoMecanica) {
+            const tradeId = "tr_" + Math.random().toString(36).substring(2, 9);
+            
+            let geo, mat, startPos, endPos;
+            startPos = new THREE.Vector3(-18, 4, 0);
+            endPos = new THREE.Vector3(18, 4, 0);
+
+            if (tipoMecanica === 'ATTACK') {
+                geo = new THREE.IcosahedronGeometry(1.2, 0);
+                mat = new THREE.MeshPhongMaterial({ color: 0xef4444, flatShading: true });
+                pushLog("Lançando ataque balístico!");
+            } else if (tipoMecanica === 'GOLD') {
+                geo = new THREE.TorusGeometry(0.8, 0.3, 5, 12);
+                mat = new THREE.MeshPhongMaterial({ color: 0xf59e0b, flatShading: true });
+                pushLog("Enviando suprimento de ouro...");
+            } else {
+                geo = new THREE.ConeGeometry(0.9, 2, 5);
+                mat = new THREE.MeshPhongMaterial({ color: 0x10b981, flatShading: true });
+                pushLog("Propondo tratado de aliança...");
+            }
+
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.copy(startPos);
+            scene.add(mesh);
+
+            const animObj = { t: 0 };
+            activeProjectiles.push({ id: tradeId, mesh: mesh });
+
+            if (typeof TWEEN !== 'undefined') {
+                new TWEEN.Tween(animObj)
+                    .to({ t: 1 }, 1800)
+                    .onUpdate(() => {
+                        const currX = THREE.MathUtils.lerp(startPos.x, endPos.x, animObj.t);
+                        const currY = startPos.y + Math.sin(animObj.t * Math.PI) * 12;
+                        mesh.position.set(currX, currY, 0);
+                    })
+                    .onComplete(() => {
+                        enviarRede(tipoMecanica, tradeId);
+                    })
+                    .start();
+            } else {
+                enviarRede(tipoMecanica, tradeId);
+            }
+        }
+
+        function enviarRede(tipoMecanica, tradeId) {
+            const payload = {
+                id: ME_ID,
+                me: { hp: myHealth },
+                since: lastSeq,
+                send: [
+                    {
+                        to: TARGET_ID,
+                        m: {
+                            tipo: "PROPOSTA_TÁTICA",
+                            tradeId: tradeId,
+                            mecanica: tipoMecanica,
+                            origem: ME_ID
+                        }
+                    }
+                ]
+            };
+            fazerRequisicaoMundo(payload);
+        }
+
+        function escutarMundo() {
+            const payload = {
+                id: ME_ID,
+                me: { hp: myHealth },
+                since: lastSeq
+            };
+            fazerRequisicaoMundo(payload);
+        }
+
+        function fazerRequisicaoMundo(payload) {
+            fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.seq !== undefined) {
+                    lastSeq = data.seq;
+                    document.getElementById('world-seq').innerText = data.seq;
+                }
+
+                if (data.inbox && data.inbox.length > 0) {
+                    data.inbox.forEach(msg => {
+                        if (msg.tipo === "PROPOSTA_TÁTICA" && activeTradeId !== msg.tradeId) {
+                            abrirJanelaDecisaoOponente(msg);
+                        }
+                        if (msg.tipo === "RESPOSTA_TÁTICA") {
+                            processarResolucaoVisual(msg);
+                        }
+                    });
+                }
+            })
+            .catch(e => {
+                // Silencioso se estiver rodando local sem servidor
+            });
+        }
+
+        function abrirJanelaDecisaoOponente(msg) {
+            activeTradeId = msg.tradeId;
+            
+            const overlay = document.getElementById('decision-overlay');
+            const card = document.getElementById('decision-card');
+            const title = document.getElementById('decision-title');
+            const desc = document.getElementById('decision-desc');
+            
+            card.className = "";
+            
+            if (msg.mecanica === 'ATTACK') {
+                card.classList.add('alert-attack');
+                title.innerText = "🚨 ATAQUE DETECTADO";
+                desc.innerText = `A base tática inimiga disparou contra você. Escolha sua reação!`;
+            } else if (msg.mecanica === 'GOLD') {
+                card.classList.add('alert-trade');
+                title.innerText = "💰 OFERTA DE RECURSO";
+                desc.innerText = `O rival enviou uma proposta de ouro. Deseja aceitar ou contestar?`;
+            } else {
+                card.classList.add('alert-alliance');
+                title.innerText = "🤝 PROPOSTA DE ALIANÇA";
+                desc.innerText = `Um tratado de cooperação foi oferecido. Qual a sua resposta?`;
+            }
+
+            overlay.style.display = 'flex';
+            
+            countdownTime = 15;
+            const timerBar = document.getElementById('timer-bar');
+            timerBar.style.width = "100%";
+            
+            clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                countdownTime -= 0.1;
+                const pct = (countdownTime / 15) * 100;
+                timerBar.style.width = pct + "%";
+                
+                if (countdownTime <= 0) {
+                    clearInterval(countdownInterval);
+                    overlay.style.display = 'none';
+                    aplicarDanoInatividade();
+                }
+            }, 100);
+
+            renderizarProjetilInimigoAproximando(msg.mecanica, msg.tradeId);
+        }
+
+        function renderizarProjetilInimigoAproximando(mecanica, tradeId) {
+            if (activeProjectiles.some(p => p.id === tradeId)) return;
+
+            let geo, mat;
+            if (mecanica === 'ATTACK') {
+                geo = new THREE.IcosahedronGeometry(1.2, 0);
+                mat = new THREE.MeshPhongMaterial({ color: 0xef4444, flatShading: true });
+            } else if (mecanica === 'GOLD') {
+                geo = new THREE.TorusGeometry(0.8, 0.3, 5, 12);
+                mat = new THREE.MeshPhongMaterial({ color: 0xf59e0b, flatShading: true });
+            } else {
+                geo = new THREE.ConeGeometry(0.9, 2, 5);
+                mat = new THREE.MeshPhongMaterial({ color: 0x10b981, flatShading: true });
+            }
+
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(18, 4, 0);
+            scene.add(mesh);
+
+            activeProjectiles.push({ id: tradeId, mesh: mesh });
+
+            const animObj = { t: 0 };
+            if (typeof TWEEN !== 'undefined') {
+                new TWEEN.Tween(animObj)
+                    .to({ t: 0.5 }, 1000)
+                    .onUpdate(() => {
+                        const currX = THREE.MathUtils.lerp(18, 0, animObj.t);
+                        const currY = 4 + Math.sin(animObj.t * Math.PI) * 12;
+                        mesh.position.set(currX, currY, 0);
+                    })
+                    .start();
+            }
+        }
+
+        function responderAcao(statusDecidido) {
+            clearInterval(countdownInterval);
+            document.getElementById('decision-overlay').style.display = 'none';
+
+            const payload = {
+                id: ME_ID,
+                me: { hp: myHealth },
+                since: lastSeq,
+                send: [
+                    {
+                        to: TARGET_ID,
+                        m: {
+                            tipo: "RESPOSTA_TÁTICA",
+                            tradeId: activeTradeId,
+                            status: statusDecidido,
+                            respondente: ME_ID
+                        }
+                    }
+                ]
+            };
+
+            fazerRequisicaoMundo(payload);
+            executarEfeitoDefesaLocal(statusDecidido, activeTradeId, false);
+            activeTradeId = null;
+        }
+
+        function processarResolucaoVisual(msg) {
+            const index = activeProjectiles.findIndex(p => p.id === msg.tradeId);
+            if (index !== -1) {
+                const proj = activeProjectiles[index];
+                scene.remove(proj.mesh);
+                activeProjectiles.splice(index, 1);
+            }
+
+            executarEfeitoDefesaLocal(msg.status, msg.tradeId, true);
+        }
+
+        function executarEfeitoDefesaLocal(status, tradeId, SouOAutorOriginal) {
+            if (status === 'ACCEPTED') {
+                pushLog(`Ação concluída: Termos ACEITOS.`);
+                const targetBase = SouOAutorOriginal ? opBaseMesh : myBaseMesh;
+                flashBaseColor(targetBase, 0x10b981);
+            } 
+            else if (status === 'REJECTED') {
+                pushLog(`Ação bloqueada: Proposta RECUSADA.`);
+                const targetShield = SouOAutorOriginal ? opShield : myShield;
+                
+                if (typeof TWEEN !== 'undefined') {
+                    const animS = { opacity: 0 };
+                    new TWEEN.Tween(animS)
+                        .to({ opacity: 1 }, 200)
+                        .yoyo(true).repeat(1)
+                        .onUpdate(() => { targetShield.material.opacity = animS.opacity; })
+                        .start();
+                }
+            } 
+            else if (status === 'REVISED') {
+                pushLog(`Proposta enviada para REVISÃO.`);
+                const targetBase = SouOAutorOriginal ? opBaseMesh : myBaseMesh;
+                flashBaseColor(targetBase, 0xf59e0b);
+            }
+            else if (status === 'COUNTERED') {
+                pushLog(`🚨 CONTRA-ATAQUE REGISTRADO!`);
+                if (SouOAutorOriginal) {
+                    myHealth = Math.max(0, myHealth - 20);
+                    document.getElementById('my-hp').innerText = myHealth + "%";
+                    flashBaseColor(myBaseMesh, 0xef4444);
+                } else {
+                    opHealth = Math.max(0, opHealth - 20);
+                    document.getElementById('op-hp').innerText = opHealth + "%";
+                    flashBaseColor(opBaseMesh, 0xef4444);
+                }
+            }
+        }
+
+        function flashBaseColor(mesh, hexColor) {
+            if(!mesh) return;
+            const origColor = mesh.material.color.getHex();
+            mesh.material.color.setHex(hexColor);
+            setTimeout(() => { mesh.material.color.setHex(origColor); }, 600);
+        }
+
+        function aplicarDanoInatividade() {
+            pushLog("⏱️ Limite de tempo esgotado! Dano por inatividade.");
+            myHealth = Math.max(0, myHealth - 30);
+            document.getElementById('my-hp').innerText = myHealth + "%";
+            flashBaseColor(myBaseMesh, 0xef4444);
+            responderAcao('EXPIRED');
+        }
+
+        function pushLog(txt) {
+            const hud = document.getElementById('log-hud');
+            const toast = document.createElement('div');
+            toast.className = 'hud-toast';
+            toast.innerText = txt;
+            hud.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 4000);
+        }
+
+        function reiniciarConexao() {
+            ME_ID = document.getElementById('my-id').value;
+            TARGET_ID = document.getElementById('target-id').value;
+            pushLog(`Conexão configurada para: ${ME_ID}.`);
+        }
+
+        window.onload = () => {
+            init3D();
+            setInterval(escutarMundo, 2500);
+        };
+    </script>
+</body>
+</html>
