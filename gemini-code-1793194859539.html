@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>República — Simulador de Governo Online</title>
+<style>
+:root {
+  --bg: #04060a;
+  --panel: #0a0f18;
+  --card: #0d1420;
+  --card-border: rgba(255, 255, 255, 0.09);
+  --tx: #f0f4f8;
+  --mut: #68788d;
+  --g: #3ec87e;
+  --g2: #27a05f;
+  --gd: #165233;
+  --y: #d4a347;
+  --r: #e0524a;
+  --b: #4a90e2;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;user-select:none}
+html,body{width:100%;height:100%;overflow-x:hidden}
+
+body {
+  font-family: "Inter Tight", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--tx);
+  overscroll-behavior: none;
+  min-height: 100vh;
+  padding-bottom: 85px;
+}
+
+h1, h2, h3 { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; color: #fff; }
+h1 { font-size: 1.4rem; }
+h2 { font-size: 0.75rem; font-weight: 700; margin: 12px 0 8px; color: var(--y); letter-spacing: 0.12em; text-transform: uppercase; }
+#data { color: var(--mut); font-size: 0.72rem; }
+
+header {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  justify-content: space-between; padding: 10px 16px;
+  background: rgba(10, 15, 24, 0.85);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--card-border);
+  position: relative; z-index: 10;
+}
+
+button {
+  background: linear-gradient(180deg, #182232 0%, #101724 100%);
+  color: var(--tx);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 11px; padding: 8px 13px; cursor: pointer;
+  font-size: 0.8rem; font-weight: 600;
+  box-shadow: 0 4px 0 #04070c, 0 6px 14px rgba(0,0,0,0.5);
+  transition: transform 0.1s ease;
+}
+button:active { transform: translateY(2px); }
+button.primary {
+  background: linear-gradient(180deg, #42db8e 0%, #22a35b 100%);
+  color: #011408; font-weight: 700; border: 0;
+}
+
+#kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px 14px; z-index: 2; position: relative; }
+.kpi {
+  text-align: center; padding: 10px 6px;
+  background: linear-gradient(160deg, #101724 0%, #090e17 100%);
+  border: 1px solid var(--card-border); border-radius: 14px;
+}
+.kpi b { display: block; font-size: 1.15rem; font-weight: 700; }
+.kpi span { font-size: 0.6rem; color: var(--mut); text-transform: uppercase; margin-top: 4px; display: block; }
+
+#news {
+  margin: 4px 14px 10px; padding: 10px 14px;
+  background: rgba(16, 15, 10, 0.9);
+  border-left: 4px solid var(--y); border-radius: 11px;
+  font-size: 0.8rem; font-style: italic;
+}
+
+main { max-width: 800px; margin: 0 auto; padding: 0 14px 20px; position: relative; z-index: 2; }
+main > .card { display: none; margin-bottom: 12px; }
+.card {
+  background: rgba(13, 20, 32, 0.92);
+  border: 1px solid var(--card-border); border-radius: 18px;
+  padding: 10px 16px 18px; box-shadow: 0 6px 0 #020407, 0 12px 36px rgba(0,0,0,0.7);
+}
+
+body[data-aba=mundo] #c-mundo, body[data-aba=orc] #c-orc,
+body[data-aba=nacao] #c-nacao, body[data-aba=acao] #c-acao,
+body[data-aba=rank] #c-rank, body[data-aba=pais] #c-pais { display: block; }
+
+input[type=range] { width: 100%; accent-color: var(--g); cursor: pointer; }
+#log { max-height: 220px; overflow-y: auto; font-size: 0.78rem; color: var(--mut); }
+#log p { margin: 6px 0; border-left: 2px solid rgba(62,200,126,0.3); padding-left: 10px; }
+
+#tela {
+  position: fixed; inset: 0; background: rgba(2, 4, 8, 0.9);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px; z-index: 90; overflow-y: auto;
+}
+#tela[hidden] { display: none; }
+.box {
+  background: linear-gradient(165deg, #131c2a 0%, #090e17 100%);
+  border: 1px solid rgba(212,163,71,0.3); border-radius: 20px;
+  padding: 22px; max-width: 480px; width: 100%;
+}
+.box input[type=text] {
+  width: 100%; padding: 10px; margin: 8px 0; border-radius: 8px;
+  background: #04060a; border: 1px solid rgba(255,255,255,0.1); color: #fff;
+}
+
+#abas {
+  position: fixed; left: 50%; bottom: 14px;
+  width: min(520px, calc(100% - 24px)); transform: translateX(-50%);
+  display: flex; gap: 4px; padding: 6px; z-index: 50;
+  background: rgba(14, 21, 33, 0.92);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 24px;
+}
+#abas button {
+  flex: 1; border-radius: 18px; background: none; border: 0;
+  font-size: 0.6rem; text-transform: uppercase; color: var(--mut); padding: 8px 2px;
+}
+#abas button.on { background: rgba(62,200,126,0.15); color: var(--g); }
+
+#globo { position: fixed; inset: 0; z-index: 0; width: 100vw; height: 100vh; background: #020306; touch-action: none; }
+body:not([data-aba=mundo]):not(.pre) #globo { display: none; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body data-aba="orc">
+
+<header>
+  <h1>República</h1>
+  <div id="data"></div>
+  <div class="btns" style="display:flex;gap:6px">
+    <button id="prox" class="primary">Passar 1 mês ▶</button>
+    <button id="mapa">🗺️ Mapa</button>
+    <button id="novo">Renunciar</button>
+  </div>
+</header>
+
+<div id="news"></div>
+<section id="kpis"></section>
+
+<main>
+  <div class="card" id="c-rank"><h2>🏆 Ranking</h2><div id="rank"></div></div>
+  <div class="card" id="c-orc"><h2>💰 Orçamento</h2><div id="ctrl"></div></div>
+  <div class="card" id="c-nacao"><h2>📊 Nação</h2><div id="inds"></div></div>
+  <div class="card" id="c-acao"><h2>🏛️ Ações</h2><div id="acoes"></div><div id="log"></div></div>
+</main>
+
+<div id="tela"></div>
+<div id="modal" hidden><div class="box"><h3 id="mt"></h3><p id="md"></p><div id="mo"></div></div></div>
+
+<script>
+"use strict";
+
+// Sistema de Proteção contra Tela Preta / Falha de WebGL
+let semGlobo = false;
+try {
+  const canvas = document.createElement('canvas');
+  if (!window.WebGLRenderingContext || !canvas.getContext('webgl')) {
+    semGlobo = true;
+  }
+} catch(e) {
+  semGlobo = true;
+}
+
+// Timeout de segurança: Se a página demorar mais de 3 segundos para carregar o ambiente, força a exibição
+setTimeout(() => {
+  const tela = document.getElementById("tela");
+  if (tela && !tela.hidden && !tela.innerHTML.trim()) {
+    tela.innerHTML = `<div class="box"><h3>Aviso do Sistema</h3><p>O modo 3D pesado demorou a responder neste dispositivo. Clique abaixo para entrar no modo leve funcional.</p><button class="primary" onclick="location.reload()">Recarregar Página</button></div>`;
+  }
+}, 3500);
+
+// Limpeza preventiva de cache corrompido que gera tela preta
+if (localStorage.getItem("rb_save") === "undefined") {
+  localStorage.clear();
+}
+</script>
+
+<!-- Scripts principais do motor do jogo -->
+<script>
+// Insira aqui o restante das suas funções e lógica do jogo original (S, PAISES, Rede, etc.)
+</script>
+
+</body>
+</html>
