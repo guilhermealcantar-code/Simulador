@@ -1081,7 +1081,8 @@ const Rede=(()=>{
 "use strict";
 // Interface do jogador: painéis, botões e manual
 const cor=v=>v>=60?"var(--g)":v>=35?"var(--y)":"var(--r)";
-const bar=(n,v)=>`<div class="c3"><b>${v.toFixed(0)}</b><div class="col" style="height:${Math.max(4,v*1.3)}px;--c:${cor(v)}"><i class="f"></i><i class="s"></i><i class="t"></i></div><span>${n.split(" ")[0]}</span></div>`;
+const pil=(lab,txt,px,c,trk)=>`<div class="c3"><b>${txt}</b><div class="pw"><div class="pl" style="--h:${px}px;--H:${trk||px}px;--c:${c}">${trk?'<div class="k"><i class="f"></i><i class="s"></i><i class="t"></i></div>':''}<div class="v"><i class="f"></i><i class="s"></i><i class="t"></i></div></div></div><span>${lab}</span></div>`;
+const bar=(n,v)=>pil(n.split(" ")[0],v.toFixed(0)+"%",Math.max(4,v*1.3),cor(v),130);
 const kpi=(n,v,ruim)=>`<div class="kpi"><b style="color:${ruim?"var(--r)":"var(--tx)"}">${v}</b><span>${n}</span></div>`;
 
 function draw(){
@@ -1097,8 +1098,8 @@ function draw(){
   for(const k in base)c+=`<div class="row"><label><span>${nomes[k]}</span><b>${din(S.gasto[k])}</b></label><input type="range" min="0" max="${base[k]*2.5}" step=".1" value="${S.gasto[k]}" data-g="${k}"></div>`;
   c+=`<p style="font-size:.8rem;color:${def>0?"var(--r)":"var(--g)"}">Resultado anual: ${def>0?"déficit (a conta fica pros seus netos)":"superávit (alguém roubou menos que o normal)"}: ${din(Math.abs(def))} por ano</p>`;
   c+=`<p class="mut">💵 Receita ${din(S.imp)} · Despesa ${din(def+S.imp)} (juros ${din(S.divida*S.selic/100)}) · Dívida total ${din(S.divida)} · PIB ${din(100)}</p><p class="mut">🛡️ Interceptação de bombas ${prot()}% · ☢️ Arsenal ${arsenal()} ogiva(s)${S.casco>0?" · 🔵 Casco Azul ("+S.casco+"m)":""}</p>`;$("#ctrl").innerHTML=graf3d()+c;
-  $("#inds").innerHTML=Object.keys(S.ind).map(k=>bar(nomes[k],S.ind[k])).join("");
-  $("#rels").innerHTML=Object.keys(S.rel).map(k=>bar(k,S.rel[k])).join("");
+  $("#inds").innerHTML=Object.keys(S.ind).map(k=>bar(nomes[k],S.ind[k],k)).join("");
+  $("#rels").innerHTML=Object.keys(S.rel).map(k=>bar(k,S.rel[k],k)).join("");
   $("#acoes").innerHTML=ACOES.map((a,i)=>`<div class="acao"><span>${a[0]}</span><button data-a="${i}" ${S.cd[i]||S.fim?"disabled":""}>${S.cd[i]?S.cd[i]+"m":"Aprontar"}</button></div>`).join("");
   $("#log").innerHTML=S.log.map(l=>`<p>${l}</p>`).join("");
   const m=$("#modal");
@@ -1258,7 +1259,7 @@ const XY={CA:[56,-106],RU:[61,100],US:[39,-98],GB:[54,-2],DE:[51,10],TR:[39,35],
 const IMG="https://cdn.jsdelivr.net/npm/three-globe/example/img/";
 const TROCAS=[["🤝 Comércio justo (os dois crescem)",{g:.3,aprov:2},{g:.3,aprov:2}],["💸 Empréstimo (você me empresta, eu pago em popularidade)",{divida:-6},{aprov:4,g:.2}],["🔬 Troca de tecnologia (infra por educação)",{"ind.infra":6},{"ind.educ":6}],["🛡️ Aliança militar (defesa pros dois)",{"ind.mil":8},{"ind.mil":8}]];
 let G=null,Gel=null,alvoG=null,fxA=[],fxR=[],fxV=[];const cdG={seq:0,nuke:0};
-const ativo=()=>S&&!S.fim, pw=n=>Math.ceil((cdG[n]-Date.now())/1000), coord=id=>{const j=Rede.lista()[id];return j&&XY[j.pais]};
+const ativo=()=>S&&!S.fim, pw=n=>Math.ceil((cdG[n]-Date.now())/1000), coord=id=>{if(typeof id==="string"&&id.startsWith("npc:"))return XY[id.slice(4)];const j=Rede.lista()[id];return j&&XY[j.pais]};
 let torres=[],fxP=[];
 const upG=()=>{try{G&&Gel&&Gel.isConnected&&(G.arcsData(fxA),G.ringsData(fxR),G.pointsData(torres.concat(fxP)))}catch(e){}};
 const popup=h=>{let p=$("#pop");if(!p){p=document.createElement("div");p.id="pop";p.style.cssText="position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px;z-index:40;overflow:auto";document.body.appendChild(p)}p.innerHTML=`<div class="box" style="max-height:88vh;overflow:auto;width:min(560px,94vw)">${h}<button data-w="x">Fechar</button></div>`};
@@ -1274,22 +1275,22 @@ function lanca(de,para,boom){const A=coord(de),B=coord(para);if(!A||!B)return;
   if(boom){som("whoosh");try{G&&(G.pointOfView({lat:B[0],lng:B[1],altitude:1.6},1100),G.controls().autoRotate=false)}catch(e){}setTimeout(()=>explode(B),1300)}
   upG();setTimeout(()=>{fxA=fxA.filter(x=>x!==arc);upG()},3000)}
 
-const col3=(n,t,px,c)=>`<div class="c3"><b>${t}</b><div class="col" style="height:${px}px;--c:${c}"><i class="f"></i><i class="s"></i><i class="t"></i></div><span>${n}</span></div>`;
+const col3=(n,t,px,c)=>pil(n,t,px,c,0);
 function graf3d(){const it=[["Receita",S.imp,3.2,"#2ecc71"],...Object.keys(base).map(k=>[nomes[k].split(" ")[0],S.gasto[k],14,"#3498db"]),["Juros",S.divida*S.selic/100,10,"#e74c3c"]];
   return `<h2>Orçamento <small>R$ por ano</small></h2><div class="g3d">`+it.map(([n,v,f,c])=>col3(n,dinc(v),Math.max(4,v*f),c)).join("")+`</div>`}
 setInterval(()=>{const n=fxA.length+fxR.length+fxP.length,a=Date.now();fxA=fxA.filter(x=>a-x.t<5000);fxR=fxR.filter(x=>a-x.t<7000);fxP=fxP.filter(x=>a-x.t<4000);if(n!==fxA.length+fxR.length+fxP.length)upG()},2000);
 const idF=f=>{const p=f.properties;return p.ADMIN==="France"?"FR":(p.ISO_A2_EH&&p.ISO_A2_EH!=="-99"?p.ISO_A2_EH:p.ISO_A2)};
 const dono=id=>Object.entries(Rede.lista()).find(([k,j])=>j.pais===id);
 function foco(id){try{G.pointOfView({lat:XY[id][0],lng:XY[id][1],altitude:1.7},900);G.controls().autoRotate=false}catch(e){}}
-function clique(id){const o=dono(id);
+function clique(id){const o=dono(id);if(EU.pais&&!o&&window.npcAlvo&&ativo()){npcAlvo(id);return}
   if(!EU.pais&&!o){escolhido=id;abrirMapa(true)}
   else if(EU.pais&&o&&o[0]===Rede.eu()){alvoG=null;foco(id);painel();G._sig=""}
   else if(!EU.pais&&o){msgErro="Esse país já tem dono. Escolha outro!";painel()}
   else if(EU.pais&&o&&o[0]!==Rede.eu()){alvoG=o[0];foco(id);painel();G._sig=""}}
 function marc(c,o){
   const meu=o&&o[0]===Rede.eu(),el=document.createElement("div");
-  el.style.cssText="font:600 11px Inter Tight,system-ui,sans-serif;white-space:nowrap;cursor:pointer;transform:translate(-50%,-50%);pointer-events:auto;color:#f3efe6;background:rgba(10,13,18,.72);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:3px 9px";
-  el.innerHTML=`${c.f} <span style="color:${meu?"#6fe0b8":o?"#e3bd68":"#aab3c0"}">${o?esc(o[1].nome):c.n}</span>`;el.onclick=()=>clique(c.id);return el}
+  el.className="mk"+(meu?" meu":o?" rival":"");
+  el.innerHTML=`<i>${c.f}${o&&typeof presidenteONU==="function"&&presidenteONU()===o[0]?"👑":""}</i><span class="nm">${o?esc(o[1].nome):c.n}</span>`;el.onclick=()=>clique(c.id);return el}
 
 function painel(){
   const p=$("#gpan");if(!p)return;const L=Rede.lista(),a=alvoG&&L[alvoG];let h;
@@ -1328,7 +1329,7 @@ function criaGlobo(){Gel=$("#globo");
     U.forEach(u=>fetch(u).then(r=>{if(!r.ok)throw 0;return r.json()}).then(d=>{if(ok)return;ok=true;const f=d.features.filter(f=>XY[idF(f)]);G._geo=f;G._sig="";try{localStorage.setItem(KEY,JSON.stringify(f))}catch(e){}}).catch(()=>{if(++falhas>=U.length&&!ok)console.warn("geojson indisponível")}))})()}
 function atualiza(){
   if(G._w!==innerWidth||G._h!==innerHeight){G._w=innerWidth;G._h=innerHeight;G.width(G._w).height(G._h)}
-  const L=Rede.lista(),sig=JSON.stringify([Object.values(L).map(j=>j.nome+j.pais+j.leg+j.aprov),alvoG,escolhido,!!EU.pais,!!G._geo]);
+  const L=Rede.lista(),sig=JSON.stringify([Object.values(L).map(j=>j.nome+j.pais+j.leg+j.aprov),alvoG,escolhido,!!EU.pais,!!G._geo,typeof presidenteONU==="function"&&presidenteONU()]);
   if(sig!==G._sig){G._sig=sig;
     G._mk=PAISES.map(c=>({lat:XY[c.id][0],lng:XY[c.id][1],el:marc(c,dono(c.id))}));G.htmlElementsData(G._mk.concat(fxV));
     G.polygonsData(G._geo||[]);
@@ -1717,22 +1718,12 @@ function menuEleicao(){
 function menuONU(alvo){
   if(!S||S.fim)return;
   onuAlvo=(typeof alvo==="string"&&alvo)||alvoG||null;
-  const j=onuAlvo&&Rede.lista()[onuAlvo],pr=presidenteONU(),eu=Rede.eu(),off=Rede.isOff();
-  let h=`<h3>🇺🇳 Conselho da ONU</h3>`;
-  if(off)h+=`<p class="mut">Modo offline: sem presidente. Cada pedido vai a voto de 🇺🇸 EUA, 🇨🇳 China e 🇪🇺 UE (2 de 3).</p>`;
-  else if(!pr)h+=`<p class="mut">⚖️ A ONU ainda não tem presidente. Enquanto isso, cada pedido vai a voto de 🇺🇸 EUA, 🇨🇳 China e 🇪🇺 UE (2 de 3). Escolham um presidente abaixo.</p>`;
-  else if(pr===eu)h+=`<p style="color:var(--y)">👑 Você é o PRESIDENTE DA ONU. Seus pedidos são aprovados na hora, e você decide os pedidos dos outros.</p>`;
-  else h+=`<p class="mut">👑 Presidente da ONU: <b>${esc(nomeDe(pr))}</b>. Todo pedido seu passa por ele (ele tem 25s para decidir).</p>`;
-  h+=`<button data-w="eleicao" class="primary" style="width:100%;margin:6px 0">🗳️ Eleger o presidente da ONU${pr?" · atual: "+esc(nomeDe(pr)):""}</button>`;
-  if(pr===eu&&!off){const t1=(S.onuT&&S.onuT.pres_s)>Date.now(),t2=(S.onuT&&S.onuT.pres_c)>Date.now();
-    h+=`<h3 style="margin-top:10px">👑 Poderes do presidente</h3>
-    <button data-w="pres:s" ${t1||!j?"disabled":""}>⚖️ Decretar sanção direta${t1?" · espera "+Math.ceil((S.onuT.pres_s-Date.now())/1000)+"s":""}<br><small>${j?"Alvo: "+esc(j.nome)+". Sem votação, sem espera dos EUA/China/UE.":"Escolha um país-alvo no mundo primeiro."}</small></button>
-    <button data-w="pres:a" ${(S.onuT&&S.onuT.pres_a>Date.now())||!j?"disabled":""}>🔍 Auditar país<br><small>${j?"Revela as finanças e o arsenal de "+esc(j.nome)+" por 3 minutos.":"Escolha um país-alvo no mundo primeiro."}</small></button>
-    <button data-w="pres:f" ${S.onuT&&S.onuT.pres_f>Date.now()?"disabled":""}>💰 Verba da presidência<br><small>Dívida cai, aprovação sobe e todos os 3 membros gostam de você. Espera 4 minutos.</small></button>
-    <button data-w="pres:c" ${t2?"disabled":""}>🕊️ Cessar-fogo global${t2?" · espera "+Math.ceil((S.onuT.pres_c-Date.now())/1000)+"s":""}<br><small>Todos os outros jogadores ficam 60s sem atacar ninguém.</small></button>`}
-  h+=`<h3 style="margin-top:10px">Pedidos</h3>`+
-    ONU.map(o=>{const e=onuEspera(o),sem=o.alvo&&!j;
-      return `<button data-w="onu:${o.id}" ${e||sem?"disabled":""}>${o.n}${e?" · espera "+e:""}<br><small>${o.d}${sem?" Escolha um país-alvo no mundo primeiro.":(o.alvo?" Alvo: "+esc(j.nome)+".":"")}</small></button>`}).join("")+`<button data-w="x">Fechar</button>`;
+  const j=onuAlvo&&Rede.lista()[onuAlvo],pr=presidenteONU(),eu=Rede.eu(),off=Rede.isOff(),now=Date.now();
+  const cd=k=>{const t=(S.onuT&&S.onuT[k])||0;return t>now?Math.ceil((t-now)/1000):0};
+  const tl=(w,ic,t,s,e,d)=>`<button class="ut" data-w="${w}" ${e||d?"disabled":""}><i>${ic}</i><b>${t}</b><small>${e?"⏳ "+e+"s":s}</small></button>`;
+  let h=`<div class="uhead"><div class="ucrown">${pr?"👑":"⚖️"}</div><div><b>${pr?esc(nomeDe(pr)):"Cadeira vazia"}</b><small>${pr?(pr===eu?"Você é o presidente da ONU":"Presidente da ONU · decide seus pedidos"):"Sem presidente · votação 2 de 3"}</small></div>${off?"":`<button class="primary" data-w="eleicao">🗳️ Eleição</button>`}</div>`;
+  if(pr===eu&&!off)h+=`<h3>👑 Poderes</h3><div class="ugrid">`+tl("pres:s","⚖️","Sanção",j?esc(j.nome):"escolha um alvo",cd("pres_s"),!j)+tl("pres:a","🔍","Auditar",j?esc(j.nome):"escolha um alvo",cd("pres_a"),!j)+tl("pres:f","💰","Verba","dívida↓ aprovação↑",cd("pres_f"))+tl("pres:c","🕊️","Cessar-fogo","60s sem ataques",cd("pres_c"))+tl("pres:d","🎙️","Discurso","aprovação↑ relações↑",cd("pres_d"))+tl("pres:b","🔵","Capacetes","proteção 6 meses",cd("pres_b"))+`</div>`;
+  h+=`<h3>🙏 Pedidos${pr&&pr!==eu?" ao presidente":""}</h3><div class="ugrid">`+ONU.map(o=>{const e=onuEspera(o),sem=o.alvo&&!j,p=o.n.split(" "),ic=p.shift();return `<button class="ut" data-w="onu:${o.id}" ${e||sem?"disabled":""}><i>${ic}</i><b>${p.join(" ")}</b><small>${e?"⏳ "+e:(sem?"escolha um alvo":(o.alvo?"alvo: "+esc(j.nome):esc(o.d.split(".")[0].slice(0,38))))}</small></button>`}).join("")+`</div><button data-w="x" style="width:100%;margin-top:8px">Fechar</button>`;
   popup(h);
 }
 function aplicaONU(o){
@@ -1761,6 +1752,8 @@ document.addEventListener("click",e=>{
   if(w==="pres:s"){if(!souPres()||!(onuAlvo&&Rede.lista()[onuAlvo]))return;if(S.onuT&&S.onuT.pres_s>Date.now())return;S.onuT=S.onuT||{};S.onuT.pres_s=Date.now()+45000;fechaPop();aplicaONU({id:"res",n:"⚖️ Sanção decretada pelo presidente"});return}
   if(w==="pres:a"){if(!souPres()||!(onuAlvo&&Rede.lista()[onuAlvo]))return;if(S.onuT&&S.onuT.pres_a>Date.now())return;S.onuT=S.onuT||{};S.onuT.pres_a=Date.now()+60000;S.espi=S.espi||{};S.espi[onuAlvo]=Date.now()+180000;fechaPop();msg(`🔍 Auditoria da ONU em ${nomeDe(onuAlvo)}: finanças reveladas por 3 minutos.`);save();draw();return}
   if(w==="pres:f"){if(!souPres())return;if(S.onuT&&S.onuT.pres_f>Date.now())return;S.onuT=S.onuT||{};S.onuT.pres_f=Date.now()+240000;fechaPop();ap({divida:-2,aprov:4,"rel.EUA":3,"rel.UE":3,"rel.China":3});msg("💰 Verba da presidência da ONU recebida.");save();draw();return}
+  if(w==="pres:d"){if(!souPres()||(S.onuT&&S.onuT.pres_d>Date.now()))return;S.onuT=S.onuT||{};S.onuT.pres_d=Date.now()+150000;fechaPop();ap({aprov:5,cong:3,"rel.EUA":2,"rel.UE":2,"rel.China":2,"rel.Argentina":2});msg("🎙️ Seu discurso na Assembleia Geral emocionou o mundo.");S.news="🎙️ Discurso histórico na ONU";addFeed("🎙️ "+esc(EU.nome)+" discursou na Assembleia Geral");save();draw();return}
+  if(w==="pres:b"){if(!souPres()||(S.onuT&&S.onuT.pres_b>Date.now()))return;S.onuT=S.onuT||{};S.onuT.pres_b=Date.now()+300000;fechaPop();S.casco=(S.casco||0)+6;msg("🔵 Capacetes Azuis protegem seu país por 6 meses.");S.news="🔵 Capacetes Azuis a caminho";save();draw();return}
   if(w==="pres:c"){if(!souPres())return;if(S.onuT&&S.onuT.pres_c>Date.now())return;S.onuT=S.onuT||{};S.onuT.pres_c=Date.now()+180000;fechaPop();
     const L=Rede.lista();Object.keys(L).forEach(id=>{if(id!==eu&&L[id].pais)Rede.enviar(id,{k:"onu",t:"cessar",de:eu,deNome:EU.nome})});
     feed(null,"decretou cessar-fogo global de 60s",false);msg("🕊️ Cessar-fogo global decretado por 60s.");S.news="🕊️ Cessar-fogo global";save();draw();return}
@@ -2260,6 +2253,132 @@ setInterval(()=>{
 },20000);
 })();
 
+</script>
+<style id="ux">
+/* ===== visual novo: mais limpo, cantos suaves, menos texto ===== */
+.card{border-radius:18px;background:linear-gradient(180deg,#101722,#0a0e15);border:1px solid rgba(255,255,255,.07);box-shadow:0 10px 28px rgba(0,0,0,.4)}
+.card:hover,.kpi:hover{transform:none}
+button{border-radius:12px;box-shadow:0 2px 0 #060a10,0 4px 10px rgba(0,0,0,.35);transition:transform .12s,background .15s}
+button:active:not(:disabled){transform:scale(.95)}
+.kpi{border-radius:14px}.kpi b{font-size:1.22rem}
+#news{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* marcadores do globo */
+.mk{display:inline-flex;align-items:center;gap:5px;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;white-space:nowrap;
+  font:600 11px "Inter Tight",system-ui,sans-serif;color:#f3efe6;background:rgba(10,13,18,.7);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:3px 7px;transition:transform .15s}
+.mk i{font-style:normal;font-size:16px;line-height:1}
+.mk .nm{display:none;color:#aab3c0}
+.mk.meu .nm,.mk.rival .nm,.mk:hover .nm{display:inline}
+.mk.meu{border-color:#6fe0b8;box-shadow:0 0 0 0 #6fe0b8aa;animation:mkp 2s infinite}.mk.meu .nm{color:#6fe0b8}
+.mk.rival{border-color:#e3bd68}.mk.rival .nm{color:#e3bd68}
+.mk:hover{transform:translate(-50%,-50%) scale(1.25);z-index:9}
+@keyframes mkp{70%{box-shadow:0 0 0 12px #6fe0b800}100%{box-shadow:0 0 0 0 #6fe0b800}}
+.float-tooltip-kap{background:rgba(10,13,18,.94)!important;border:1px solid rgba(255,255,255,.16);border-radius:12px!important;padding:8px 12px!important;font:600 13px "Inter Tight",system-ui,sans-serif!important;color:#f3efe6!important}
+/* painel do mundo vira folha: botões grandes, textos curtos (toque abre) */
+#c-mundo{border-radius:20px!important}
+#c-mundo .mut{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+#c-mundo .mut.abre{-webkit-line-clamp:unset}
+.acs button{border-radius:14px;padding:13px 4px;line-height:1.25;background:linear-gradient(180deg,#1b2638,#121a28)}
+/* atalhos do globo */
+#gdock{display:none;position:fixed;left:12px;top:72px;z-index:7;flex-direction:column;gap:8px}
+body[data-aba=mundo] #gdock{display:flex}body.temalvo #gdock{display:none}
+#gdock button{width:46px;height:46px;padding:0;font-size:1.25rem;border-radius:50%;background:#0b1220ee;border:1px solid rgba(255,255,255,.18)}
+#gdock button.on{border-color:#6fe0b8;background:#12302a}
+</style>
+<script id="ux-js">
+(function(){
+  const dock=document.createElement("div");dock.id="gdock";
+  dock.innerHTML='<button data-k="eu" title="Meu país">🎯</button><button data-k="giro" class="on" title="Girar">🔄</button><button data-k="rival" title="Rival aleatório">🎲</button><button data-k="mais" title="Aproximar">➕</button><button data-k="menos" title="Afastar">➖</button>';
+  document.body.appendChild(dock);
+  dock.onclick=e=>{const b=e.target.closest("button");if(!b||typeof G==="undefined"||!G)return;const k=b.dataset.k;
+    try{const c=G.controls(),pv=G.pointOfView();
+      if(k==="eu"){if(EU.pais)foco(EU.pais.id)}
+      else if(k==="giro"){c.autoRotate=!c.autoRotate;b.classList.toggle("on",c.autoRotate)}
+      else if(k==="rival"){const o=Object.entries(Rede.lista()).filter(([id,j])=>id!==Rede.eu()&&j.pais&&XY[j.pais]);if(o.length)clique(o[Math.floor(Math.random()*o.length)][1].pais)}
+      else G.pointOfView({altitude:Math.max(.4,Math.min(4,pv.altitude*(k==="mais"?.65:1.5)))},500)
+    }catch(x){}};
+  // toque num texto cinza expande/recolhe
+  document.addEventListener("click",e=>{const m=e.target.closest&&e.target.closest("#c-mundo .mut");if(m)m.classList.toggle("abre")});
+  // melhora o globo assim que ele existir: país acende no hover, giro volta sozinho, zoom de entrada
+  const iv=setInterval(()=>{
+    if(typeof G==="undefined"||!G||G._ux)return;G._ux=1;clearInterval(iv);
+    try{
+      let hov=null;const cap=G.polygonCapColor(),alt=G.polygonAltitude();
+      const aplica=()=>{G.polygonCapColor(f=>idF(f)===hov?"rgba(255,255,255,.4)":cap(f));G.polygonAltitude(f=>idF(f)===hov?.045:alt(f))};
+      G.polygonsTransitionDuration(150);aplica();
+      G.onPolygonHover(f=>{const n=f?idF(f):null;if(n===hov)return;hov=n;Gel.style.cursor=n?"pointer":"grab";aplica()});
+      const c=G.controls();let t;
+      c.addEventListener("start",()=>{clearTimeout(t);c.autoRotate=false;const g=$("#gdock button[data-k=giro]");g&&g.classList.remove("on")});
+      c.addEventListener("end",()=>{clearTimeout(t);t=setTimeout(()=>{if(!alvoG){c.autoRotate=true;const g=$("#gdock button[data-k=giro]");g&&g.classList.add("on")}},9000)});
+      G.pointOfView({altitude:3.2},0);setTimeout(()=>G.pointOfView({altitude:2.1},1800),300);
+    }catch(e){}
+  },500);
+})();
+</script>
+<style id="ux2">
+/* pilares 3D: caixa de verdade (frente, lateral, topo), trilho de vidro até 100% e sombra no chão */
+.c3{--w:24px;--d:14px}.g3d .c3{--w:20px}
+.pw{filter:drop-shadow(0 9px 6px rgba(0,0,0,.55))}
+.pl{position:relative;width:var(--w);height:var(--H);transform-style:preserve-3d;transform-origin:50% 100%;transform:rotateX(-22deg) rotateY(-34deg);margin:0 8px}
+.pl .k,.pl .v{position:absolute;left:0;bottom:0;width:var(--w);transform-style:preserve-3d}
+.pl .k{height:var(--H)}
+.pl .v{height:var(--h);transform:translate3d(0,0,1px);transform-origin:50% 100%;animation:pgrow .9s cubic-bezier(.2,.8,.2,1) backwards}
+@keyframes pgrow{from{transform:translate3d(0,0,1px) scaleY(0)}}
+.pl i{position:absolute;display:block}
+.pl .f{left:0;top:0;width:100%;height:100%}
+.pl .s{left:var(--w);top:0;width:var(--d);height:100%;transform-origin:left;transform:rotateY(90deg)}
+.pl .t{left:0;top:0;width:100%;height:var(--d);transform-origin:top;transform:rotateX(-90deg)}
+.pl .k .f{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.16)}
+.pl .k .s{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.12)}
+.pl .k .t{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2)}
+.pl .v .f{background:linear-gradient(90deg,color-mix(in srgb,var(--c) 72%,#fff),var(--c) 55%,color-mix(in srgb,var(--c) 80%,#000))}
+.pl .v .s{background:color-mix(in srgb,var(--c) 55%,#000)}
+.pl .v .t{background:color-mix(in srgb,var(--c) 60%,#fff)}
+.c3 b{letter-spacing:.01em}
+.ugrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0}
+.ut{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 6px;border-radius:14px;text-align:center}
+.ut i{font-style:normal;font-size:1.6rem}.ut b{font-size:.84rem}.ut small{font-size:.66rem;color:var(--mut)}
+.uhead{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1a2a44,#0e1626);border:1px solid rgba(227,189,104,.35);border-radius:16px;padding:12px;margin-bottom:10px}
+.uhead b{display:block}.uhead small{color:var(--mut);font-size:.7rem}.ucrown{font-size:2rem}.uhead button{margin-left:auto}
+</style>
+<script id="npc-js">
+(function(){
+  const REL={US:"EUA",CN:"China",AR:"Argentina",DE:"UE",FR:"UE",ES:"UE",PT:"UE",PL:"UE",SE:"UE",IT:"UE"};
+  const liv=()=>PAISES.filter(c=>XY[c.id]&&!dono(c.id)&&(!EU.pais||c.id!==EU.pais.id));
+  const nm=c=>c.f+" "+c.n,rnd=a=>a[Math.floor(Math.random()*a.length)];
+  let ultHit=0;window.npcOn=true;
+  function guerra(){
+    try{
+      if(window.npcOn&&S&&!S.fim&&EU.pais&&typeof G!=="undefined"&&G&&document.body.dataset.aba==="mundo"){
+        const L=liv();
+        if(L.length>2){
+          const a=rnd(L),rk=REL[a.id],rel=rk&&S.rel?S.rel[rk]:60;
+          if(Date.now()-ultHit>90000&&Math.random()<(100-rel)/220){
+            ultHit=Date.now();lanca("npc:"+a.id,"npc:"+EU.pais.id,false,"🚀");
+            setTimeout(()=>{if(!S||S.fim)return;
+              if(Math.random()<prot()/100){msg(`🛡️ Seu escudo interceptou o ataque de ${nm(a)}.`);S.news=`🛡️ Ataque de ${a.n} interceptado`}
+              else{ap({aprov:-2,"ind.seg":-1,"ind.infra":-1});msg(`💥 ${nm(a)} atacou seu país!`);S.news=`💥 ${a.n} atacou ${EU.nome}`}
+              addFeed("💥 "+esc(nm(a))+" atacou "+esc(EU.nome));save();draw()},2400);
+          }else{let b;do{b=rnd(L)}while(b===a);lanca("npc:"+a.id,"npc:"+b.id,false,"🚀");addFeed("⚔️ "+esc(nm(a))+" atacou "+esc(nm(b)))}
+        }
+      }
+    }catch(e){}
+    setTimeout(guerra,14000+Math.random()*16000)}
+  setTimeout(guerra,12000);
+  window.npcAlvo=id=>{const c=PAISES.find(x=>x.id===id);if(!c)return;const l=liv().filter(x=>x.id!==id),al=l.length?rnd(l):null;window._npcAl=al&&al.id;
+    popup(`<h3>${c.f} ${c.n} <small style="color:var(--mut)">país da IA</small></h3><div class="ugrid"><button class="ut" onclick="npcAtq('${id}',0)"><i>⚔️</i><b>Atacar</b><small>sozinho</small></button><button class="ut" onclick="npcAtq('${id}',1)"><i>🤝</i><b>Com a IA</b><small>${al?al.f+" ataca junto":"sem aliado"}</small></button></div><button onclick="fechaPop()" style="width:100%;margin-top:8px">Fechar</button>`)};
+  window.npcAtq=(id,junto)=>{fechaPop();if(!S||S.fim||!EU.pais||bloqueado())return;
+    if((cdG.npc||0)>Date.now()){msg("⏳ Aguarde "+Math.ceil((cdG.npc-Date.now())/1000)+"s para outro ataque.");draw();return}
+    cdG.npc=Date.now()+25000;const c=PAISES.find(x=>x.id===id),al=junto&&PAISES.find(x=>x.id===window._npcAl),ef={},rk=REL[id];
+    lanca("npc:"+EU.pais.id,"npc:"+id,false,"🚀");
+    if(al){setTimeout(()=>lanca("npc:"+al.id,"npc:"+id,false,"🚀"),500);Object.assign(ef,{aprov:3,"ind.mil":2,divida:.3});const ar=REL[al.id];if(ar)ef["rel."+ar]=3;
+      msg(`🤝 Você e ${nm(al)} atacaram ${nm(c)}.`);addFeed("🤝 "+esc(EU.nome)+" e "+esc(nm(al))+" atacaram "+esc(nm(c)))}
+    else{Object.assign(ef,{aprov:1,"ind.mil":1,divida:.5});msg(`⚔️ Você atacou ${nm(c)}.`);addFeed("⚔️ "+esc(EU.nome)+" atacou "+esc(nm(c)))}
+    if(rk)ef["rel."+rk]=(ef["rel."+rk]||0)-5;
+    ap(ef);S.news=`⚔️ ${EU.nome} atacou ${c.n}`;save();draw()};
+  const d=document.getElementById("gdock");
+  if(d){d.insertAdjacentHTML("beforeend",'<button data-k="ia" class="on" title="IA ataca">🤖</button>');
+    d.addEventListener("click",e=>{const b=e.target.closest("button[data-k=ia]");if(b){window.npcOn=!window.npcOn;b.classList.toggle("on",window.npcOn)}})}
+})();
 </script>
 </body>
 </html>
