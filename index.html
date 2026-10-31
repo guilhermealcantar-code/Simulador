@@ -2213,11 +2213,11 @@ async function envia(){
   const inp=document.getElementById("dipin"),t=inp.value.trim().slice(0,220);
   if(!t||espera||!S||S.fim)return;
   const p=pers;inp.value="";(hist[p]=hist[p]||[]).push({r:"eu",t});espera=true;pinta();
-  const d=await chamar({tipo:"diplomacia",persona:p,rel:relDe(p),msg:t,hist:hist[p].slice(-7,-1),resumo:resumo()},true);
+  const d=await chamar({tipo:"diplomacia",persona:p,rel:relDe(p),msg:t,hist:hist[p].filter(m=>m.r==="eu"||m.r==="ia").slice(-13,-1),resumo:resumo()},true);
   espera=false;const h=hist[p];
   if(!S||S.fim){fecha();return}
   if(!d||typeof d.fala!=="string"){h.push({r:"sys",t:"📵 Sem sinal com o diplomata"+(ultErro?" (motivo: "+ultErro+")":"")+". Tente de novo em instantes."});pinta();return}
-  h.push({r:"ia",t:String(d.fala).slice(0,300)});
+  h.push({r:"ia",t:String(d.fala).slice(0,450)});
   const ef=limpa(d.efeitos);
   if(d.aceito===true&&Object.keys(ef).length){
     S.ia=S.ia||{};const w=(S.ia[p]||0)-Date.now();
